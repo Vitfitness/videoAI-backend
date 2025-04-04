@@ -1,37 +1,35 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-require("dotenv").config();
+const { exec } = require("child_process");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Conectar a MongoDB Atlas
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("✅ Conectado a MongoDB"))
-  .catch(err => console.error("❌ Error conectando a MongoDB:", err));
+// Conexión a MongoDB Atlas
+mongoose.connect("mongosh "mongodb+srv://cluster0.mqrqndc.mongodb.net/" --apiVersion 1 --username financierosintegraless --password p8OLY1XAjKsxL9Hr", { useNewUrlParser: true, useUnifiedTopology: true });
 
-// Definir modelo de Video en MongoDB
 const VideoSchema = new mongoose.Schema({
   videoUrl: String,
   edits: Array,
 });
 const Video = mongoose.model("Video", VideoSchema);
 
-// Ruta para procesar un video
+// Procesar video con FFMPEG
 app.post("/process-video", async (req, res) => {
   const { videoUrl } = req.body;
   if (!videoUrl) return res.status(400).json({ error: "Falta el enlace del video" });
 
-  // Simulación de procesamiento (en el futuro aquí iría FFMPEG)
-  const newVideo = new Video({ videoUrl, edits: ["Escalado a 720p"] });
-  await newVideo.save();
-  
-  res.json({ message: "Video procesado", url: videoUrl });
+  exec(`ffmpeg -i ${videoUrl} -vf "scale=1280:720" output.mp4`, (error) => {
+    if (error) return res.status(500).json({ error: "Error procesando el video" });
+
+    // Guardar en la base de datos
+    const newVideo = new Video({ videoUrl, edits: ["Scaled to 720p"] });
+    newVideo.save();
+    
+    res.json({ message: "Video procesado", url: "output.mp4" });
+  });
 });
 
-// Iniciar servidor en puerto 5000
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`));
- 
+app.listen(5000, () => console.log("Backend en http://localhost:5000"));
